@@ -69,6 +69,14 @@ export ThermalDispatchNoMin
 export ThermalMultiStartUnitCommitment
 export ThermalCompactUnitCommitment
 
+######## HybridSystem Formulations ########
+export PhysicalCoupling
+export FinancialCoupling
+export StandardHybridFormulation
+
+export FinancialCouplingDisaptch
+export StandardHybridFormulationDisaptch
+
 ###### Regulation Device Formulation #######
 export DeviceLimitedRegulation
 export ReserveLimitedRegulation
@@ -86,6 +94,7 @@ export SemiContinuousFF
 export RangeFF
 export IntegralLimitFF
 export ParameterFF
+export PowerCommitmentFF
 
 # InitialConditions chrons
 export InterProblemChronology
@@ -375,6 +384,7 @@ include("devices_models/devices/common/expressionarray_algebra.jl")
 include("devices_models/devices/common/energy_balance_constraint.jl")
 include("devices_models/devices/common/energy_management_constraints.jl")
 include("devices_models/devices/common/get_time_series.jl")
+include("devices_models/devices/common/hybrid_constraints.jl")
 
 include("core/feedforward.jl")
 include("core/problem_results.jl")
@@ -393,6 +403,7 @@ include("devices_models/devices/DC_branches.jl")
 include("devices_models/devices/storage.jl")
 include("devices_models/devices/hydro_generation.jl")
 include("devices_models/devices/regulation_device.jl")
+include("devices_models/devices/hybrid_generation.jl")
 
 # Services Models
 include("services_models/agc.jl")
@@ -417,6 +428,7 @@ include("devices_models/device_constructors/renewablegeneration_constructor.jl")
 include("devices_models/device_constructors/load_constructor.jl")
 include("devices_models/device_constructors/storage_constructor.jl")
 include("devices_models/device_constructors/regulationdevice_constructor.jl")
+include("devices_models/device_constructors/hybrid_constructor.jl")
 
 # Network constructors
 include("network_models/network_constructor.jl")

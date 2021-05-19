@@ -1141,6 +1141,7 @@ function must_run_constraints!(
         make_variable_name(OnVariable, PSY.ThermalMultiStart),
         nothing,
         nothing,
+        nothing,
     )
 
     device_timeseries_lb!(optimization_container, ts_inputs)

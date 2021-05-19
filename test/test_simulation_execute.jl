@@ -80,7 +80,7 @@ end
 end
 
 @testset "Simulation Single Stage with Cache" begin
-    c_sys5_hy_ed = PSB.build_system(PSITestSystems, "c_sys5_hy_ed")
+    c_sys5_hy_ed = PSB.build_system(PSITestSystems, "c_sys5_hy_ems_ed")
     template = get_template_hydro_st_ed()
     problems = SimulationProblems(
         ED = OperationsProblem(template, c_sys5_hy_ed; optimizer = ipopt_optimizer),
@@ -100,11 +100,11 @@ end
         sequence = single_sequence,
         simulation_folder = mktempdir(cleanup = true),
     )
-    # Disabled due to https://github.com/NREL-SIIP/PowerSystemCaseBuilder.jl/issues/11
-    #build_out = build!(sim_single_wcache)
-    #@test build_out == PSI.BuildStatus.BUILT
-    #execute_out = execute!(sim_single_wcache)
-    #@test execute_out == PSI.RunStatus.SUCCESSFUL
+
+    build_out = build!(sim_single_wcache)
+    @test build_out == PSI.BuildStatus.BUILT
+    execute_out = execute!(sim_single_wcache)
+    @test execute_out == PSI.RunStatus.SUCCESSFUL
 end
 
 @testset "Simulation with 2-Stages and Cache" begin

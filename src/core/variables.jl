@@ -1,10 +1,16 @@
 #! format: off
 
 const ACTIVE_POWER = "P"
+const SUBCOMPONENT_ACTIVE_POWER = "P_SubComponent"
 const ACTIVE_POWER_IN = "Pin"
+const SUBCOMPONENT_ACTIVE_POWER_IN = "Pin_SubComponent"
 const ACTIVE_POWER_OUT = "Pout"
+const ACTIVE_POWER_SHORTAGE = "P_shortage"
+const ACTIVE_POWER_SURPLUS = "P_surplus"
+const SUBCOMPONENT_ACTIVE_POWER_OUT = "Pout_SubComponent"
 const COLD_START = "start_cold"
 const ENERGY = "E"
+const SUBCOMPONENT_ENERGY = "E_SubComponent"
 const ENERGY_UP = "Eup"
 const ENERGY_DOWN = "Edown"
 const ENERGY_BUDGET = "energy_budget"
@@ -24,6 +30,7 @@ const TARGET = "Target"
 const OUTFLOW = "Out"
 const ON = "On"
 const REACTIVE_POWER = "Q"
+const SUBCOMPONENT_REACTIVE_POWER = "Q_SubComponent"
 const RESERVE = "R"
 const SERVICE_REQUIREMENT = "service_requirement"
 const SLACK_DN = "γ⁻"
@@ -35,9 +42,18 @@ const THETA = "theta"
 const VM = "Vm"
 const LIFT = "z"
 const ACTIVE_POWER_PUMP = "Ppump"
+const ACTIVE_POWER_THERMAL = "P_thermal"
+const ACTIVE_POWER_LOAD = "P_load"
+const ACTIVE_POWER_IN_STORAGE = "Pin_storage"
+const ACTIVE_POWER_OUT_STORAGE = "Pout_storage"
+const ACTIVE_POWER_RENEWABLE = "P_renewable"
+const REACTIVE_POWER_THERMAL = "Q_thermal"
+const REACTIVE_POWER_LOAD = "Q_load"
+const REACTIVE_POWER_STORAGE = "Q_storage"
+const REACTIVE_POWER_RENEWABLE = "Q_renewable"
 
 abstract type VariableType end
-
+abstract type SubComponentVariableType <: VariableType end
 """Struct to dispatch the creation of Active Power Variables"""
 struct ActivePowerVariable <: VariableType end
 
@@ -46,6 +62,10 @@ struct ActivePowerInVariable <: VariableType end
 
 """Struct to dispatch the creation of Active Power Output Variables for 2-directional devices. for instance storage or pump-hydro"""
 struct ActivePowerOutVariable <: VariableType end
+
+struct ActivePowerShortageVariable <: VariableType end
+
+struct ActivePowerSurplusVariable <: VariableType end
 
 struct HotStartVariable <: VariableType end
 
@@ -95,6 +115,16 @@ struct AdditionalDeltaActivePowerDownVariable <: VariableType end
 
 struct SmoothACE <: VariableType end
 
+struct SubComponentActivePowerVariable <: SubComponentVariableType end
+
+struct SubComponentReactivePowerVariable <: SubComponentVariableType end
+
+struct SubComponentActivePowerInVariable <: SubComponentVariableType end
+
+struct SubComponentActivePowerOutVariable <: SubComponentVariableType end
+
+struct SubComponentEnergyVariable <: SubComponentVariableType end
+
 """Struct to dispatch the creation of Flow Active Power Variables"""
 struct FlowActivePowerVariable <: VariableType end
 
@@ -124,6 +154,10 @@ make_variable_name(::Type{ActivePowerVariable}, ::Type{T}) where {T <: PSY.Compo
 make_variable_name(::Type{ActivePowerInVariable}, ::Type{T}) where {T <: PSY.Device} = encode_symbol(T, "Pin")
 
 make_variable_name(::Type{ActivePowerOutVariable}, ::Type{T}) where {T <: PSY.Device} = encode_symbol(T, "Pout")
+
+make_variable_name(::Type{ActivePowerSurplusVariable}, ::Type{T}) where {T <: PSY.Device} = encode_symbol(T, "P_surplus")
+
+make_variable_name(::Type{ActivePowerShortageVariable}, ::Type{T}) where {T <: PSY.Device} = encode_symbol(T, "P_shortage")
 
 make_variable_name(::Type{HotStartVariable}, ::Type{T}) where {T <: PSY.Device} = encode_symbol(T, "start_hot")
 
@@ -182,6 +216,16 @@ make_variable_name(::Type{AdditionalDeltaActivePowerDownVariable}, ::Type{PSY.Re
 make_variable_name(::Type{SmoothACE}, ::Type{T}) where {T <: PSY.AggregationTopology} = encode_symbol(T, "SACE")
 
 make_variable_name(::Type{FlowActivePowerVariable}, ::Type{T}) where {T <: PSY.Component} = encode_symbol(T, "Fp")
+
+make_variable_name(::Type{SubComponentActivePowerVariable}, ::Type{T}) where {T <: PSY.Component} = encode_symbol(T, "P_SubComponent")
+
+make_variable_name(::Type{SubComponentActivePowerInVariable}, ::Type{T}) where {T <: PSY.Component} = encode_symbol(T, "Pin_SubComponent")
+
+make_variable_name(::Type{SubComponentActivePowerOutVariable}, ::Type{T}) where {T <: PSY.Component} = encode_symbol(T, "Pout_SubComponent")
+
+make_variable_name(::Type{SubComponentEnergyVariable}, ::Type{T}) where {T <: PSY.Component} = encode_symbol(T, "E_SubComponent")
+
+make_variable_name(::Type{SubComponentReactivePowerVariable}, ::Type{T}) where {T <: PSY.Component} = encode_symbol(T, "Q_SubComponent")
 
 make_variable_name(::Type{FlowReactivePowerVariable}, ::Type{T}) where {T <: PSY.Component} = encode_symbol(T, "Fq")
 

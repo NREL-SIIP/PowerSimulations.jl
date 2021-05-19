@@ -330,6 +330,7 @@ function construct_device!(
     end
 
     # Variables
+
     add_variables!(optimization_container, ActivePowerInVariable, devices, EnergyTarget())
     add_variables!(optimization_container, ActivePowerOutVariable, devices, EnergyTarget())
     add_variables!(optimization_container, ReactivePowerVariable, devices, EnergyTarget())

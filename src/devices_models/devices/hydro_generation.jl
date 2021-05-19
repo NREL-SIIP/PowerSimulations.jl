@@ -562,7 +562,6 @@ function energy_target_constraint!(
                 constraint_infos,
                 make_constraint_name(RangeConstraint, EnergyShortageVariable, T),
                 make_variable_name(EnergyShortageVariable, T),
-                Vector{Symbol}(),
             ),
         )
     end
@@ -886,4 +885,31 @@ function AddCostSpec(
         variable_cost = cost_function,
         multiplier = OBJECTIVE_FUNCTION_POSITIVE,
     )
+end
+
+#TODO: check this out
+# function cost_function!(
+#     optimization_container::OptimizationContainer,
+#     devices::IS.FlattenIteratorWrapper{PSY.HydroEnergyReservoir},
+#     device_formulation::Type{D},
+#     system_formulation::Type{<:PM.AbstractPowerModel},
+# ) where {D <: AbstractHydroFormulation}
+#     add_to_cost!(
+#         optimization_container,
+#         devices,
+#         make_variable_name(ACTIVE_POWER, PSY.HydroEnergyReservoir),
+#         :fixed,
+#         1.0,
+#     )
+
+#     return
+# end
+
+function cost_function!(
+    optimization_container::OptimizationContainer,
+    devices::IS.FlattenIteratorWrapper{H},
+    device_formulation::Type{D},
+    system_formulation::Type{<:PM.AbstractPowerModel},
+) where {D <: AbstractHydroFormulation, H <: PSY.HydroGen}
+    return
 end

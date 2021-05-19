@@ -6,6 +6,7 @@ struct RangeConstraintSpec
     constraint_func::Function
     constraint_struct::Type{<:AbstractRangeConstraintInfo}
     lag_limits_func::Union{Function, Nothing}
+    subcomponent_type::Union{Nothing, Type{<:PSY.Component}}
 end
 
 function RangeConstraintSpec(;
@@ -16,6 +17,7 @@ function RangeConstraintSpec(;
     constraint_func,
     constraint_struct,
     lag_limits_func = nothing,
+    subcomponent_type = nothing,
 )
     return RangeConstraintSpec(
         constraint_name,
@@ -25,6 +27,7 @@ function RangeConstraintSpec(;
         constraint_func,
         constraint_struct,
         lag_limits_func,
+        subcomponent_type,
     )
 end
 
@@ -36,6 +39,7 @@ struct TimeSeriesConstraintSpec
     forecast_label::Union{Nothing, String}
     multiplier_func::Union{Nothing, Function}
     constraint_func::Function
+    subcomponent_type::Union{Nothing, Type{<:PSY.Component}}
 end
 
 function TimeSeriesConstraintSpec(;
@@ -46,6 +50,7 @@ function TimeSeriesConstraintSpec(;
     forecast_label,
     multiplier_func,
     constraint_func,
+    subcomponent_type = nothing,
 )
     return TimeSeriesConstraintSpec(
         constraint_name,
@@ -55,6 +60,7 @@ function TimeSeriesConstraintSpec(;
         forecast_label,
         multiplier_func,
         constraint_func,
+        subcomponent_type,
     )
 end
 
@@ -134,6 +140,9 @@ function device_range_constraints!(
 
     if !(spec.devices_filter_func === nothing)
         devices = filter!(spec.devices_filter_func, collect(devices))
+        if isempty(devices)
+            return
+        end
     end
 
     if feedforward === nothing
@@ -170,10 +179,10 @@ end
 function _apply_range_constraint_spec!(
     optimization_container,
     spec,
-    devices::IS.FlattenIteratorWrapper{T},
+    devices::D,
     model,
     ff_affected_variables,
-) where {T <: PSY.Device}
+) where {D <: Union{Vector{T}, IS.FlattenIteratorWrapper{T}}} where {T <: PSY.Device}
     constraint_struct = spec.constraint_struct
     constraint_infos = Vector{constraint_struct}(undef, length(devices))
     constraint_name = spec.constraint_name
@@ -202,6 +211,7 @@ function _apply_range_constraint_spec!(
         add_device_services!(constraint_info, dev, model)
         constraint_infos[i] = constraint_info
     end
+    subcomp_type = !isnothing(spec.subcomponent_type) ? spec.subcomponent_type : nothing
 
     spec.constraint_func(
         optimization_container,
@@ -210,6 +220,7 @@ function _apply_range_constraint_spec!(
             constraint_name,
             variable_name,
             bin_var_name,
+            subcomp_type,
         ),
     )
     return
@@ -218,10 +229,10 @@ end
 function _apply_timeseries_range_constraint_spec!(
     optimization_container,
     spec,
-    devices::IS.FlattenIteratorWrapper{T},
+    devices::D,
     model,
     ff_affected_variables,
-) where {T <: PSY.Device}
+) where {D <: Union{Vector{T}, IS.FlattenIteratorWrapper{T}}} where {T <: PSY.Device}
     variable_name = spec.variable_name
     if variable_name in ff_affected_variables
         @debug "Skip adding $variable_name because it is handled by feedforward"
@@ -235,7 +246,8 @@ function _apply_timeseries_range_constraint_spec!(
         add_device_services!(constraint_info.range, dev, model)
         constraint_infos[i] = constraint_info
     end
-
+    sub_component_type =
+        !isnothing(spec.subcomponent_type) ? spec.subcomponent_type : nothing
     ts_inputs = TimeSeriesConstraintSpecInternal(
         constraint_infos,
         spec.constraint_name,
@@ -243,7 +255,64 @@ function _apply_timeseries_range_constraint_spec!(
         spec.bin_variable_name,
         spec.parameter_name === nothing ? nothing :
         UpdateRef{T}(spec.parameter_name, spec.forecast_label),
+        sub_component_type,
     )
     spec.constraint_func(optimization_container, ts_inputs)
     return
 end
+
+function _apply_timeseries_range_constraint_spec!(
+    optimization_container,
+    spec,
+    devices::D,
+    model,
+    ff_affected_variables,
+) where {D <: Union{Vector{T}, IS.FlattenIteratorWrapper{T}}} where {T <: PSY.HybridSystem}
+    variable_name = spec.variable_name
+    if variable_name in ff_affected_variables
+        @debug "Skip adding $variable_name because it is handled by feedforward"
+        return
+    end
+    constraint_infos = Vector{DeviceTimeSeriesConstraintInfo}(undef, length(devices))
+    for (i, dev) in enumerate(devices)
+        ts_vector = get_subcompnent_time_series(
+            optimization_container,
+            dev,
+            spec.subcomponent_type,
+            spec.forecast_label,
+        )
+        constraint_info =
+            DeviceTimeSeriesConstraintInfo(dev, spec.multiplier_func, ts_vector)
+        add_device_services!(constraint_info.range, dev, model)
+        constraint_infos[i] = constraint_info
+    end
+    sub_component_type =
+        !isnothing(spec.subcomponent_type) ? spec.subcomponent_type : nothing
+    ts_inputs = TimeSeriesConstraintSpecInternal(
+        constraint_infos,
+        spec.constraint_name,
+        variable_name,
+        spec.bin_variable_name,
+        spec.parameter_name === nothing ? nothing :
+        UpdateRef{T}(spec.parameter_name, spec.forecast_label),
+        sub_component_type,
+    )
+    spec.constraint_func(optimization_container, ts_inputs)
+    return
+end
+
+function get_subcompnent_time_series(
+    optimization_container,
+    dev,
+    subcomponent_type,
+    forecast_label,
+)
+    subcomp = get_subcomponent(dev, subcomponent_type)
+    return get_time_series(optimization_container, subcomp, forecast_label)
+end
+
+get_subcomponent(d::PSY.HybridSystem, ::Type{<:PSY.ElectricLoad}) = PSY.get_electric_load(d)
+get_subcomponent(d::PSY.HybridSystem, ::Type{<:PSY.ThermalGen}) = PSY.get_thermal_unit(d)
+get_subcomponent(d::PSY.HybridSystem, ::Type{<:PSY.Storage}) = PSY.get_storage(d)
+get_subcomponent(d::PSY.HybridSystem, ::Type{<:PSY.RenewableGen}) =
+    PSY.get_renewable_unit(d)

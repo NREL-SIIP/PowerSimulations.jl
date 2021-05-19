@@ -41,6 +41,7 @@ get_variable_initial_value(::EnergyVariable, d::PSY.Storage, ::AbstractStorageFo
 
 get_variable_binary(::ReserveVariable, ::Type{<:PSY.Storage}, ::AbstractStorageFormulation) = true
 
+get_target_multiplier(v::PSY.BatteryEMS) = PSY.get_rating(v)
 get_efficiency(v::T, var::Type{<:InitialConditionType}) where T <: PSY.Storage = PSY.get_efficiency(v)
 
 ############## EnergyShortageVariable, Storage ####################
@@ -397,7 +398,6 @@ function energy_target_constraint!(
                 constraint_infos,
                 make_constraint_name(RangeConstraint, EnergyShortageVariable, T),
                 make_variable_name(EnergyShortageVariable, T),
-                Vector{Symbol}(),
             ),
         )
     end

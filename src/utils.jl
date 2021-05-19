@@ -262,13 +262,19 @@ function axis_array_to_dataframe(
     input_array::JuMP.Containers.SparseAxisArray,
     columns = nothing,
 )
-    column_names = unique([(k[1], k[3]) for k in keys(input_array.data)])
-    array_values = Vector{Vector{Float64}}(undef, length(column_names))
+    column_names = unique([(k[1], k[2]) for k in keys(input_array.data)])
+    array_values = Vector{Vector{Float64}}()
+    final_column_names = Vector{Symbol}()
     for (ix, col) in enumerate(column_names)
-        res = values(filter(v -> first(v)[[1, 3]] == col, input_array.data))
-        array_values[ix] = PSI._jump_value.(res)
+        res = values(
+            filter(v -> (first(v)[[1, 2]] == col) && (last(v) != 0), input_array.data),
+        )
+        if !isempty(res)
+            push!(array_values, PSI._jump_value.(res))
+            push!(final_column_names, Symbol(col...))
+        end
     end
-    return DataFrames.DataFrame(array_values, Symbol.(column_names))
+    return DataFrames.DataFrame(array_values, (final_column_names))
 end
 
 function axis_array_to_dataframe(input_array::Matrix{Float64}, columns)
@@ -312,16 +318,24 @@ function to_array(array::JuMP.Containers.DenseAxisArray{<:Number})
 end
 
 function to_array(array::JuMP.Containers.SparseAxisArray)
-    columns = unique([(k[1], k[3]) for k in keys(array.data)])
+    columns = unique([(k[1], k[2]) for k in keys(array.data)])
     # PERF: can we determine the 2-d array size?
     tmp_data = Dict{Any, Vector{Float64}}()
+    final_column_names = Vector{Symbol}()
     for (ix, col) in enumerate(columns)
-        res = values(filter(v -> first(v)[[1, 3]] == col, array.data))
-        tmp_data[col] = PSI._jump_value.(res)
+        res = values(filter(v -> (first(v)[[1, 2]] == col) && (last(v) != 0), array.data))
+        if !isempty(res)
+            tmp_data[Symbol(col...)] = PSI._jump_value.(res)
+            push!(final_column_names, Symbol(col...))
+        end
     end
 
-    data = Array{Float64, 2}(undef, length(first(values(tmp_data))), length(columns))
-    for (i, column) in enumerate(columns)
+    data = Array{Float64, 2}(
+        undef,
+        length(first(values(tmp_data))),
+        length(final_column_names),
+    )
+    for (i, column) in enumerate(final_column_names)
         data[:, i] = tmp_data[column]
     end
 
@@ -365,8 +379,21 @@ function remove_chars(s::String, char::String)
     return replace_chars(s::String, char::String, "")
 end
 
+function is_hybrid_sub_component(x::T) where {T <: PSY.Component}
+    ext = PSY.get_ext(x)
+    if haskey(ext, "is_hybrid_subcomponent") && ext["is_hybrid_subcomponent"]
+        return true
+    else
+        return false
+    end
+end
+
 function get_available_components(::Type{T}, sys::PSY.System) where {T <: PSY.Component}
-    return PSY.get_components(T, sys, x -> PSY.get_available(x))
+    return PSY.get_components(
+        T,
+        sys,
+        x -> PSY.get_available(x) & !is_hybrid_sub_component(x),
+    )
 end
 
 function get_available_components(
